@@ -63,7 +63,10 @@ int main(int argc, char** argv) {
     printf("B618@computer:%s$ ", get_current_dir_name()); //打印提示符信息
 
     while(1){
-        
+	    c = getchar();
+	    if (c >= 0) {
+	    	ungetc(c, stdin);
+	    }
 	len = i;
         offset = 0;
         

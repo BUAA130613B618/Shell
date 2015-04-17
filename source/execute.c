@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/termios.h>
+#include <dirent.h>
 
 #include "global.h"
 
@@ -127,9 +128,11 @@ Job* addJob(pid_t pid){
 
 /*移除一个作业*/
 void rmJob(int sig, siginfo_t *sip, void* noused){
+//	printf("rmJob\n");
     pid_t pid;
     Job *now = NULL, *last = NULL;
     
+  //  printf("%d\n", ingnore);
     if(ingnore == 1){
         ingnore = 0;
         return;
@@ -230,6 +233,7 @@ void fg_exec(int pid)
     now->cmd[i] = '\0';
     printf("%s\n", now->cmd);
     kill(now->pid, SIGCONT); 				//向对象作业发送SIGCONT信号，使其运行
+    sleep(100);
     waitpid(fgPid, NULL, 0); 				//父进程等待前台进程的运行
 }
 
@@ -585,10 +589,24 @@ void ExecPipe(SimpleCmd *pipeCmd[128],int pipeNum){
 }
 
 /************************第二类指令：执行外部命令********************************/
+
+/*bool CMP(char* a, char *b) {
+	int lena = strlen(a);
+	int lenb = strlen(b);
+	int i = 0, j = 0;
+	while (i < lena) {
+		if (a[i] == '*' || a[i] == )
+	}
+}*/
+
+
 void execOuterCmd(SimpleCmd *cmd)
 {
     pid_t pid;
-    int pipeIn, pipeOut;
+    int pipeIn, pipeOut, i;
+   // char* tmp;
+   // DIR *dp;
+   // struct dirent *dirp;
     if(exists(cmd->args[0]))	 			//命令存在		
     {
         if((pid = fork()) < 0)
@@ -597,7 +615,8 @@ void execOuterCmd(SimpleCmd *cmd)
             return;
         }
         if(pid == 0)					//子进程
-	{ 					
+	{ 		
+                kill(getppid(), SIGUSR1);
             if(cmd->input != NULL)			//存在输入重定向
             { 
                 if((pipeIn = open(cmd->input, O_RDONLY, S_IRUSR|S_IWUSR)) == -1)
@@ -632,7 +651,27 @@ void execOuterCmd(SimpleCmd *cmd)
                 printf("[%d]\t%s\t\t%s\n", getpid(), RUNNING, inputBuff);
                 kill(getppid(), SIGUSR1);
             }
+	    signal(SIGINT, SIG_IGN);
+	    signal(SIGTSTP, SIG_IGN);
             justArgs(cmd->args[0]);
+	    
+/*	    dp = opendir(get_current_dir_name());
+	    while (1) {
+	    	dirp = readdir(dp);
+		int i = 1;
+		while (cmd->args[i] != NULL) {
+			if (CMP(cmd->args[i], dirp->d_name)) {
+				if (execv(cmdBuff, dirp->d_name < 0)) {
+					printf("execv failed!\n");
+					return;
+				}
+			}
+			++i;
+		}
+	    }*/
+
+
+
             if(execv(cmdBuff, cmd->args) < 0)		 //执行命令
 	    {
                 printf("execv failed!\n");
@@ -641,6 +680,9 @@ void execOuterCmd(SimpleCmd *cmd)
         }
 	else						 //父进程
 	{
+		signal(SIGUSR1, setGoon);
+		while (goon == 0) ;
+		goon = 0;
             if(cmd ->isBack)				//后台命令    
 	    {          
                 fgPid = 0; 				//pid置0，为下一命令做准备
@@ -657,7 +699,7 @@ void execOuterCmd(SimpleCmd *cmd)
 	}
     }
     else 						//命令不存在
-        printf("can't find the command 15%s !\n", inputBuff);
+        printf("can't find the command %s !\n", inputBuff);
 }
 
 /**********************第三类命令：执行命令******************************/
