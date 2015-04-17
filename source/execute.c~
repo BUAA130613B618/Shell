@@ -339,7 +339,7 @@ void init(){
 ********************************************************/
 SimpleCmd* handleSimpleCmdStr(int begin, int end)
 {
-    int i, j, k;
+    int i, j, k,flag;
     int fileFinished; 							//记录命令是否解析完毕
     char c, buff[10][40], inputFile[30], outputFile[30], *temp = NULL;
     SimpleCmd *cmd = (SimpleCmd*)malloc(sizeof(SimpleCmd));
@@ -432,15 +432,39 @@ SimpleCmd* handleSimpleCmdStr(int begin, int end)
         if(!fileFinished)
             k++;
     }
-    
+    for(i= begin; i < end; i ++)					//查找是否有通配符
+        if(inputBuff[i] == '*' || inputBuff[i] == '?')
+        {
+            flag = 1;
+            FILE* f = fopen("tmp", "w");
+            fprintf(f, "#!/bin/bash\n");
+            int lp;
+            for (lp = begin; lp < end; lp ++)
+                fprintf(f, "%c", inputBuff[lp]);
+            fprintf(f, "\n");
+            fclose(f);
+            break;
+        }
 //依次为命令名及其各个参数赋值
-    cmd->args = (char**)malloc(sizeof(char*) * (k + 1));
-    cmd->args[k] = NULL;
-    for(i = 0; i<k; i++)
+    if(!flag)
     {
-        j = strlen(buff[i]);
-        cmd->args[i] = (char*)malloc(sizeof(char) * (j + 1));   
-        strcpy(cmd->args[i], buff[i]);
+    	cmd->args = (char**)malloc(sizeof(char*) * (k + 1));
+   	cmd->args[k] = NULL;
+    	for(i = 0; i<k; i++)
+	{
+        	j = strlen(buff[i]);
+        	cmd->args[i] = (char*)malloc(sizeof(char) * (j + 1));   
+        	strcpy(cmd->args[i], buff[i]);
+    	}
+    }
+    else
+    {
+        cmd->args = (char**)malloc(sizeof(char*) * (3));
+        cmd->args[0] = (char*)malloc(sizeof(char) * (10));
+        cmd->args[1] = (char*)malloc(sizeof(char) * (10));
+        cmd->args[2] = NULL;
+        strcpy(cmd->args[0], "/bin/bash");
+        strcpy(cmd->args[1], "./tmp");
     }
 //如果有输入重定向文件，则为命令的输入重定向变量赋值
     if(strlen(inputFile) != 0)
