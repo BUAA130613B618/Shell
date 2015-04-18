@@ -1459,7 +1459,7 @@ int main(int argc, char** argv) {
 
     while(1){
 	    c = getchar();
-	    if (c >= 0) {
+	    if (c >= 0 ) {
 	    	ungetc(c, stdin);
 	    }
 	len = i;

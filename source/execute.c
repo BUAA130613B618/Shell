@@ -425,7 +425,6 @@ SimpleCmd* handleSimpleCmdStr(int begin, int end)
         while(i < end && (inputBuff[i] == ' ' || inputBuff[i] == '\t'))		//跳过空格等无用信息
             i++;
     }
-    printf("%s\n",buff[0]);
     if(inputBuff[end-1] != ' ' && inputBuff[end-1] != '\t' && inputBuff[end-1] != '&')
     {
         temp[j] = '\0';
@@ -531,78 +530,86 @@ void ExecPipe(SimpleCmd *pipeCmd[128],int pipeNum){
             }
    	}
     }
-    close(pipe_fd[i][1]);					//关闭管道的输出文件描述符
-    waitpid(pid_child[0], NULL, 0);				//父进程等待前台进程的运行
-    i++;
-    while(i<pipeNum-1)
+    if(pid_child[0])
     {
-	if(pipe(pipe_fd[i])<0)
-	{
+	close(pipe_fd[i][1]);					//关闭管道的输出文件描述符
+   	waitpid(pid_child[0], NULL, 0);				//父进程等待前台进程的运行
+    	i++;
+    	while(i<pipeNum-1)
+    	{
+		if(pipe(pipe_fd[i])<0)
+		{
+			printf("创建管道失败\n");
+			return;
+		}
+		if((pid_child[i]=fork())<0)
+		{
+			perror("Fork failed");
+			exit(errno);
+		}
+		if(!pid_child[i])					//创建子进程
+		{
+			close(pipe_fd[i-1][1]);				//关闭当前管道的输出描述符		
+			//close(pipe_fd[i-1][0]);				//关闭上一个管道的写入描述符
+			dup2(pipe_fd[i-1][0],0);			//将上一个管道的写入描述符复制到进程的标准输入
+			close(pipe_fd[i-1][0]);				//关闭上一管道的输出
+			dup2(pipe_fd[i][1],1);				//将当前管道的写描述符复制到标准输出
+			close(pipe_fd[i][1]);				//关闭当前管道的输出文件描述符
+			if(exists(pipeCmd[i]->args[0]))			//存在执行命令
+			{ 
+            			if(execve(cmdBuff, pipeCmd[i]->args,NULL) < 0)
+				{ 
+                			printf("execv failed!\n");
+                			return;
+				}
+   			}
+		}
+		close(pipe_fd[i][1]);					//关闭管道的输出文件描述符
+    		waitpid(pid_child[i], NULL, 0);				//父进程等待前台进程的运行
+    		i++;
+   	 }
+	/*if(pipe(pipe_fd[i])<0)
+	  {
 		printf("创建管道失败\n");
 		return;
-	}
-	if((pid_child[i]=fork())<0)
+	  }*/
+   	if((pid_child[i]=fork())<0)
 	{
 		perror("Fork failed");
 		exit(errno);
 	}
-	if(!pid_child[i])					//创建子进程
-	{
-		close(pipe_fd[i-1][1]);				//关闭当前管道的输出描述符		
-		//close(pipe_fd[i-1][0]);				//关闭上一个管道的写入描述符
-		dup2(pipe_fd[i-1][0],0);			//将上一个管道的写入描述符复制到进程的标准输入
-		close(pipe_fd[i-1][0]);				//关闭上一管道的输出
-		dup2(pipe_fd[i][1],1);				//将当前管道的写描述符复制到标准输出
-		close(pipe_fd[i][1]);				//关闭当前管道的输出文件描述符
-		if(exists(pipeCmd[i]->args[0]))			//存在执行命令
+    	if(!pid_child[i])					//创建子进程
+    	{
+		close(pipe_fd[i-1][1]);					//关闭进程的标准输入文件
+        	dup2(pipe_fd[i-1][0], 0); 				//将管道的读描述符复制到进程的标准输入
+        	close(pipe_fd[i-1][0]); 				//关闭进程的标准输出文件
+		if(pipeCmd[i]->output != NULL)				//存在输出重定向
+		{ 			
+                	if((pipeOut = open(pipeCmd[i]->output, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR)) == -1)
+			{
+                    		printf("打不开文件 %s！\n", pipeCmd[i]->output);
+                    		return ;
+                	}
+                	if(dup2(pipeOut, 1) == -1)
+			{
+                    		printf("输出重定向错误！\n");
+                    		return;
+                	}
+        	}
+        	if(exists(pipeCmd[i]->args[0]))				//命令存在
 		{ 
-            		if(execve(cmdBuff, pipeCmd[i]->args,NULL) < 0)
-			{ 
+            		if(execve(cmdBuff, pipeCmd[i]->args,NULL) < 0)	//执行命令
+	    		{ 
                 		printf("execv failed!\n");
                 		return;
-			}
+            		}
    		}
-	}
-	close(pipe_fd[i][1]);					//关闭管道的输出文件描述符
-    	waitpid(pid_child[i], NULL, 0);				//父进程等待前台进程的运行
-    	i++;
-    }
-   if((pid_child[i]=fork())<0)
-	{
-		perror("Fork failed");
-		exit(errno);
-	}
-    if(!(pid_child[i]=fork()))					//创建子进程
-    {
-	close(pipe_fd[i-1][1]);					//关闭进程的标准输入文件
-        dup2(pipe_fd[i-1][0], 0); 				//将管道的读描述符复制到进程的标准输入
-        close(pipe_fd[i-1][0]); 				//关闭进程的标准输出文件
-	if(pipeCmd[i]->output != NULL)				//存在输出重定向
-	{ 			
-                if((pipeOut = open(pipeCmd[i]->output, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR)) == -1)
-		{
-                    printf("打不开文件 %s！\n", pipeCmd[i]->output);
-                    return ;
-                }
-                if(dup2(pipeOut, 1) == -1)
-		{
-                    printf("输出重定向错误！\n");
-                    return;
-                }
-        }
-        if(exists(pipeCmd[i]->args[0]))				//命令存在
-	{ 
-            if(execve(cmdBuff, pipeCmd[i]->args,NULL) < 0)	//执行命令
-	    { 
-                printf("execv failed!\n");
-                return;
-            }
-   	}
+    	}
     }
     close(pipe_fd[i-1][0]);					//关闭进程的标准输入文件
     waitpid(pid_child[i], NULL, 0); 				//父进程等待前台进程的运行
     return;
-}
+  }
 
 /************************第二类指令：执行外部命令********************************/
 void execOuterCmd(SimpleCmd *cmd)
@@ -783,7 +790,7 @@ void execute(){
     {
 	while(j<pipeNum-1)
 	{
-		SimpleCmd *cmd=handleSimpleCmdStr(i,pipe[j]-1);		//解析当前指令
+		SimpleCmd *cmd=handleSimpleCmdStr(i,pipe[j]);		//解析当前指令
 		pipeCmd[j]=cmd;						//累加到pipeCmd中
 		i=pipe[j]+1;						//从出现"|"的下一个地方开始就是下一条指令
 		j++;
