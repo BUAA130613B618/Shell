@@ -2,50 +2,50 @@
 所谓的文件描述符是一个低级的正整数。最前面的三个文件描述符（0，1，2）分别与标准输入（stdin），标准输出（stdout）和标准错误（stderr）对应。
 因此，函数 scanf() 使用 stdin，而函数 printf() 使用 stdout。你可以用不同的文件描述符改写默认的设置并重定向进程的 I/O 到不同的文件。
 基于文件描述符的输入输出函数：
-  creat：打开一个文件，如果该文件不存在，则创建它，调用成功后返回一个文件描述符。
-  open("ysh.conf", O_RDONLY, 660)：打开一个文件，并指定访问该文件的方式，调用成功后返回一个文件描述符。失败则返回-1；
-  close：关闭文件，进程对文件所加的锁全都被释放。
-  read(fd, &c, 1)：read()会把参数文件描述符fd所指的文件传送nbyte个字节到buf指针所指的内存中。若参数nbyte为0，则read()不会有作用并返回0。返回值为实际读取到的字节数，如果返回0，表示已到达文件尾或无可读取的数据。错误返回-1,并将根据不同的错误原因适当的设置错误码。
+  creat：打开一个文件，如果该 文件不存在，则创建它，调用成功后返回一个文件描述符。
+  open("ysh.conf", O_RDON LY, 660)：打开一个文件，并指定访问该文件的方式，调用成功后返回一个文件描述符 。失败则返回-1；
+  close：关闭文件，进程对文件 所加的锁全都被释放。
+  read(fd, &c, 1)：read()会 把参数文件描述符fd所指的文件传送nbyte个字节到buf指针所指的内存中。若参数nbyte为0，则read()不会有作用并返回0。返回值为实际读取到的字节数，如 果返回0，表示已到达文件尾或无可读取的数据。错误返回-1,并将根据不同的错 误原因适当的设置错误码。
   write：向文件描述符对应的文件中写入数据，调用成功后返回写入的字节数。
-  ftruncate：把文件描述符对应的文件缩短到指定的长度，调用成功后返回0。
-  lseek：在文件描述符对应的文件里把文件指针设定到指定的位置，调用成功后返回新指针的位置。
-  fsync:将所有已写入文件中的数据真正写到磁盘或其他下层设备上，调用成功后返回0。
-  fstat：返回文件描述符对应的文件的相关信息，把结果保存在struct stat中，调用成功后返回0。
-  fchown：改变与打开文件相关联的所有者和所有组，调用成功后返回0。
-  fchmod：把文件描述符对应的文件的权限位改为指定的八进制模式，调用成功后返回0。
-  flock：用于向文件描述符对应的文件施加建议性锁，调用成功后返回0。
-  fcntl：既能施加建议性锁也能施加强制性锁，能建立记录锁、读取锁和写入锁，调用成功后返回0。
-  dup：复制文件描述符，返回没使用的文件描述符中最小的编号。
-  dup2：由用户指定返回的文件描述符的值，用来重新打开或重定向一个文件描述符。
-  select：同时从多个文件描述符读取数据或向多个文件描述符写入数据
-
-用到signal.h里的东西
+  ftruncate：把 文件描述符对应的文件缩短到指定的长度，调用成功后返回0。
+  lseek：在文件 描述符对应的文件里把文件指针设定到指定的位置，调用成功后返回新指针的位置。 
+  fsync:将所有已写入文 件中的数据真正写到磁盘或其他下层设备上，调用成功后返回0。
+  fstat：返回文件描述符 对应的文件的相关信息，把结果保存在struct stat中，调用成功后返回0。
+  fchown：改变与打开文件 相关联的所有者和所有组，调用成功后返回0。
+  fchmod：把文件描述符 对应的文件的权限位改为指定的八进制模式，调用成功后返回0。
+  flock：用于向文件描述 符对应的文件施加建议性锁，调用成功后返回0。
+  fcntl：既能施加建议性 锁也能施加强制性锁，能建立记录锁、读取锁和写入锁，调用成功后返回0。  
+  dup：复制文件 描述符，返回没使用的文件描述符中最小的编号。
+  dup2：由用户指定 返回的文件描述符的值，用来重新打开或重定向一个文件描述符。
+  select：同时从多 个文件描述符读取数据或向多个文件描述符写入数据
+ 
+用到signal.h里  的东西
 
 两个信号处理函数
-signal(int signum,sighander_t hander);;
-sigaction(int signum,const struct sigaction *act,struct sigaction *oldact);
-    sigaction(SIGCHLD, &action, NULL);	在一个进程终止或者停止时，将SIGCHLD信号发送给其父进程
+signal(in t signum,sighander_t hander);;
+sigaction (int signum,const struct sigaction *act,struct sigaction *oldact);
+    sigaction(SIGCHLD, &action, NULL);	在一个进程终止或者停止时，将SIGCHLD信号发 送给其父进程
     signal(SIGTSTP, ctrl_Z);
 信号：
 SIGCHLD：
-SIGTSTP与SIGSTOP都是使进程暂停（都使用SIGCONT让进程重新激活）。唯一的区别是SIGSTOP不可以捕获。
-SIGUSR1和SIGUSR2是发送给一个进程的信号，它表示了用户定义的情况
-捕捉SIGTSTP后一般处理如下：
-1）处理完额外的事
-2）恢复默认处理
-3）发送SIGTSTP信号给自己。（使进程进入suspend状态。）
+SIGTSTP与SIGS TOP都是使进程暂停（都使用SIGCONT让进程重新激活）。唯一的区别是SIGSTOP不可 以捕获。
+SIGUSR1和 SIGUSR2是发送给一个进程的信号，它表示了用户定义的情况
+捕捉SIGT STP后一般处理如下：
+1）处理 完额外 的事
+2）恢复默认处理 
+3）发送SIGTSTP信 号给自己。（使进程进入suspend状态。）
 access函数			
-确定文件或文件夹的访问权限。即检查某个文件的存取方式，比如说是只读方式、只写方式等。如果指定的存取方式有效，则函数返回0，否则函数返回-1，
+确定文件或文件夹的访问权限。即检查某个文件的存取方式，比如说是只读方式、只写方式等。如果指定的存 取方式有效，则函数返回0，否则函数返回-1，
 用法：int access(const char *filenpath, int mode); 
-在头文件unistd.h中的预定义如下：
-#define F_OK 0 /* Test for existence. */
+在头文件unistd.h中 的预定义如下：
+#define F_OK 0 /*  Test for existence. */
 具体含义如下：
-F_OK 只判断是否存在
+F_OK 只判断是否存 在
 
-用到unistd.h里的东西i
+用到unistd.h里的 东西i
 	getpid()		//得到当前进程的进程标识符，process Identification
 	getppid()		//得到当前进程的父进程的进程标识符
-int pipe(int fildes[2])		//创建一个管道，把管道的读和写文件描述符方法哦数组fildes中.
+int pipe(int fild s[2])		//创建一个管道，把管道的读和写文件描述符方法哦数组fildes 中.
 
 
 
